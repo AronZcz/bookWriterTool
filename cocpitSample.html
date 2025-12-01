@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cockpit — Book Writer Tool</title>
+    <style>
+        :root{
+            --bg:#0f1720; --panel:#0b1220; --muted:#9aa6b2; --accent:#3ea6ff; --card:#0f2130;
+            --glass: rgba(255,255,255,0.03);
+            --radius:10px; --gap:14px; --max-width:1200px;
+            --fw: 500;
+        }
+        *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+        html,body{height:100%;margin:0;background:linear-gradient(180deg,#071025 0%, #071422 100%);color:#e8eef6;}
+        .container{max-width:var(--max-width);margin:20px auto;padding:18px;display:grid;gap:var(--gap);grid-template-columns:260px 1fr 320px;}
+        header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:10px;background:var(--glass);border-radius:12px;}
+        .brand{display:flex;align-items:center;gap:12px}
+        .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#6ee7b7);display:flex;align-items:center;justify-content:center;font-weight:800;color:#042;}
+        .title{font-size:18px;font-weight:700}
+        .subtitle{color:var(--muted);font-size:13px}
+        .header-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+        .nav{display:flex;gap:8px;align-items:center;margin-left:12px}
+        .nav .nav-btn{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:8px 10px;border-radius:8px;color:var(--muted);cursor:pointer}
+        .nav .nav-btn.active{color:var(--accent);border-color:rgba(62,166,255,0.12);background:linear-gradient(90deg, rgba(62,166,255,0.04), transparent)}
+        /* Views */
+        .view{display:none}
+        .view.active{display:block}
+        .auth-card{max-width:420px;margin:22px auto;padding:18px;border-radius:10px;background:var(--card);box-shadow:0 6px 20px rgba(0,0,0,0.4)}
+        .auth-form{display:flex;flex-direction:column;gap:10px}
+        .auth-form input{padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);color:inherit}
+        .auth-form .small{font-size:13px;color:var(--muted)}
+        .btn{background:linear-gradient(180deg,#0f2540,#07203a);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;color:#dff;}
+        .btn.ghost{background:transparent;border:1px dashed rgba(255,255,255,0.03);color:var(--muted)}
+        /* Sidebar */
+        .sidebar{background:linear-gradient(180deg,#071827, #071827);padding:12px;border-radius:12px;height:calc(100vh - 170px);overflow:auto}
+        .search{display:flex;margin-bottom:10px}
+        .search input{flex:1;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);color:inherit}
+        .chapters{display:flex;flex-direction:column;gap:8px}
+        .chapter{padding:10px;border-radius:8px;background:transparent;border:1px solid transparent;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+        .chapter:hover{background:rgba(255,255,255,0.02)}
+        .chapter.active{background:linear-gradient(90deg, rgba(62,166,255,0.08), rgba(110,231,183,0.03));border:1px solid rgba(62,166,255,0.12)}
+        .chapter small{color:var(--muted)}
+        .small{font-size:13px;color:var(--muted)}
+        /* Editor */
+        .editor-panel{background:linear-gradient(180deg,#071822,#03131a);padding:14px;border-radius:12px;height:calc(100vh - 170px);display:flex;flex-direction:column;gap:10px}
+        .toolbar{display:flex;gap:8px;align-items:center}
+        .toolbar .seg{display:flex;gap:6px;background:rgba(255,255,255,0.02);padding:6px;border-radius:8px}
+        .editor{flex:1;overflow:auto;padding:14px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border:1px solid rgba(255,255,255,0.02)}
+        .editor [contenteditable]{min-height:320px;outline:none;color:inherit}
+        .rightpanel{background:linear-gradient(180deg,#071827, #031821);padding:12px;border-radius:12px;height:calc(100vh - 170px);overflow:auto}
+        .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:10px;margin-bottom:10px}
+        .stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+        .progress{height:10px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden}
+        .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#6ee7b7);width:0%}
+        footer.info{grid-column:1/-1;color:var(--muted);text-align:center;font-size:13px;padding:8px}
+        /* Auth view */
+        .auth-view{display:flex;gap:12px;align-
+            .container{grid-template-columns:1fr;padding:12px}
+            .sidebar,.rightpanel{height:auto}
+            header{flex-direction:column;align-items:flex-start;gap:8px}
+        }
+        @media (max-width:600px){
+            .toolbar{flex-wrap:wrap}
+            .brand .title{font-size:16px}
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <header>
+            <div class="brand">
+                <div class="logo">BW</div>
+                <div>
+                    <div class="title">Book Writer Cockpit</div>
+                    <div class="subtitle">Manage chapters, draft, export — responsive cockpit</div>
+                </div>
+            </div>
+            <nav class="nav" aria-label="Main">
+                <button class="nav-btn active" data-view="try">Try</button>
+                <button class="nav-btn" data-view="login">Login</button>
+                <button class="nav-btn" data-view="register">Register</button>
+                <button class="nav-btn" data-view="about">About</button>
+            </nav>
+                <div class="header-actions">
+                    <button class="btn" id="newChapterBtn">+ Chapter</button>
+                    <button class="btn ghost" id="togglePreview">Preview</button>
+                    <button class="btn" id="exportBtn">Export .md</button>
+                </div>
+        </header>
+
+        <aside class="sidebar">
+            <div class="search">
+                <input id="searchChapters" placeholder="Search chapters..." />
+            </div>
+            <div class="chapters" id="chaptersList" aria-live="polite">
+                <!-- Chapters populated by JS -->
+            </div>
+        </aside>
+
+        <main id="view-try" class="editor-panel view active">
+            <div class="toolbar">
+                <div class="seg">
+                    <button class="btn" data-cmd="bold" title="Bold">B</button>
+                    <button class="btn" data-cmd="italic" title="Italic">I</button>
+                    <button class="btn" data-cmd="h2" title="Heading">H2</button>
+                    <button class="btn" data-cmd="ul" title="List">• List</button>
+                </div>
+                <div class="seg" style="margin-left:auto">
+                    <div class="small">Autosave <span id="autosaveIndicator">—</span></div>
+                </div>
+            </div>
+
+            <div class="editor card">
+                <input id="chapterTitle" placeholder="Chapter title..." style="width:100%;border:none;background:transparent;color:inherit;font-size:20px;font-weight:700;margin-bottom:8px;outline:none" />
+                <div id="content" contenteditable="true" aria-label="Chapter content" style="line-height:1.6"></div>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center">
+                <div class="small" id="status">Words: 0 • Characters: 0</div>
+                <div style="margin-left:auto" class="small">Current chapter: <span id="currentIndex">—</span></div>
+            </div>
+        </main>
+
+        <main id="view-login" class="editor-panel view" aria-hidden="true">
+            <div class="auth-card card">
+                <h3 style="margin:0 0 6px 0">Welcome back</h3>
+                <div class="small">Sign in to access your projects locally</div>
+                <form id="loginForm" class="auth-form" style="margin-top:12px">
+                    <input id="loginEmail" type="email" placeholder="Email" required />
+                    <input id="loginPassword" type="password" placeholder="Password" required />
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn" type="submit">Sign In</button>
+                        <button class="btn ghost" type="button" id="toRegisterBtn">Create account</button>
+                    </div>
+                    <div class="small">This is a demo — data stays in your browser.</div>
+                </form>
+            </div>
+        </main>
+
+        <main id="view-register" class="editor-panel view" aria-hidden="true">
+            <div class="auth-card card">
+                <h3 style="margin:0 0 6px 0">Create account</h3>
+                <div class="small">Register a local demo account (no server)</div>
+                <form id="registerForm" class="auth-form" style="margin-top:12px">
+                    <input id="regName" type="text" placeholder="Full name" required />
+                    <input id="regEmail" type="email" placeholder="Email" required />
+                    <input id="regPassword" type="password" placeholder="Password (min 6)" required />
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn" type="submit">Register</button>
+                        <button class="btn ghost" type="button" id="toLoginBtn">Back to login</button>
+                    </div>
+                    <div class="small">Accounts are stored in localStorage for this demo.</div>
+                </form>
+            </div>
+        </main>
+
+        <main id="view-about" class="editor-panel view" aria-hidden="true">
+            <div class="card" style="max-width:760px;margin:16px auto">
+                <h3 style="margin-top:0">About Book Writer Cockpit</h3>
+                <p class="small">A lightweight in-browser editor for drafting books. This demo shows login/register screens (local only), a Try view with the editor, and this About page. Styles and components follow the same visual language as the cockpit.</p>
+                <p class="small">Features: local autosave, chapter management, export to Markdown, simple formatting.</p>
+                <p class="small">Author: Local demo — no backend. Use the Try view to experiment.</p>
+            </div>
+        </main>
+
+        <aside class="rightpanel">
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div><strong>Project Progress</strong><div class="small">Target: 60k words</div></div>
+                    <div class="small" id="wordTotal">0</div>
+                </div>
+                <div style="margin-top:10px" class="progress" title="Progress">
+                    <i id="progressBar"></i>
+                </div>
+            </div>
+
+            <div class="card">
+                <strong>Quick Actions</strong>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+                    <button class="btn" id="renameBtn">Rename Project</button>
+                    <button class="btn ghost" id="clearBtn">Clear All</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <strong>Project Info</strong>
+                <div class="small" style="margin-top:8px">Chapters: <span id="chapCount">0</span></div>
+                <div class="small">Estimated read time: <span id="readTime">0 min</span></div>
+            </div>
+        </aside>
+
+        <footer class="info">Local autosave — content stored in your browser. Use Export to download.</footer>
+    </div>
+
+    <script>
+        // Minimal cockpit logic: chapters, editor, autosave, stats, export
+        const STORAGE_KEY = 'bw_cockpit_v1';
+        const DEFAULT_TARGET = 60000; // words target for progress (words)
+        let state = { projectName: 'Untitled', chapters: [], current: 0 };
+
+        // Elements
+        const chaptersList = document.getElementById('chaptersList');
+        const newChapterBtn = document.getElementById('newChapterBtn');
+        const chapterTitle = document.getElementById('chapterTitle');
+        const content = document.getElementById('content');
+        const status = document.getElementById('status');
+        const chapCount = document.getElementById('chapCount');
+        const wordTotal = document.getElementById('wordTotal');
+        const progressBar = document.getElementById('progressBar');
+        const currentIndex = document.getElementById('currentIndex');
+        const exportBtn = document.getElementById('exportBtn');
+        const searchChapters = document.getElementById('searchChapters');
+        const autosaveIndicator = document.getElementById('autosaveIndicator');
+        const renameBtn = document.getElementById('renameBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // Utilities
+        function saveState(){
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            autosaveIndicator.textContent = new Date().toLocaleTimeString();
+        }
+        function loadState(){
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if(raw) state = JSON.parse(raw);
+            if(!state.chapters || !state.chapters.length){
+                state.chapters = [{ title: 'Chapter 1', content: '' }];
+                state.current = 0;
+            }
+        }
+        function wordCount(text){
+            if(!text) return 0;
+            return text.trim().split(/\s+/).filter(Boolean).length;
+        }
+        function charCount(text){ return text ? text.length : 0; }
+
+        // UI updates
+        function renderChapters(filter = ''){
+            chaptersList.innerHTML = '';
+            state.chapters.forEach((c,i) => {
+                if(filter && !c.title.toLowerCase().includes(filter.toLowerCase()) && !c.content.toLowerCase().includes(filter.toLowerCase())) return;
+                const el = document.createElement('div');
+                el.className = 'chapter' + (i === state.current ? ' active' : '');
+                el.innerHTML = `<div>
+                                                    <div style="font-weight:600">${c.title || 'Untitled'}</div>
+                                                    <small>${wordCount(c.content)} words</small>
+                                                </div>
+                                                <div style="display:flex;gap:6px;align-items:center">
+                                                    <button title="Delete" data-i="${i}" class="btn ghost">🗑</button>
+                                                    <button title="Select" data-i="${i}" class="btn">Open</button>
+                                                </div>`;
+                el.querySelectorAll('button').forEach(btn=>{
+                    const idx = Number(btn.getAttribute('data-i'));
+                    btn.addEventListener('click', () => {
+                        if(btn.title === 'Delete'){ deleteChapter(idx); }
+                        else { switchChapter(idx); }
+                    });
+                });
+                el.addEventListener('click', (e) => {
+                    if(e.target.tagName.toLowerCase() === 'button') return;
+                    switchChapter(i);
+                });
+                chaptersList.appendChild(el);
+            });
+            chapCount.textContent = state.chapters.length;
+        }
+
+        function updateEditor(){
+            const c = state.chapters[state.current] || { title:'', content:'' };
+            chapterTitle.value = c.title || '';
+            content.innerHTML = c.content || '';
+            currentIndex.textContent = state.current + 1;
+            updateStats();
+            renderChapters(searchChapters.value);
+        }
+
+        function switchChapter(i){
+            saveCurrent();
+            state.current = i;
+            updateEditor();
+            saveState();
+        }
+
+        function addChapter(){
+            saveCurrent();
+            state.chapters.push({ title: `Chapter ${state.chapters.length+1}`, content: '' });
+            state.current = state.chapters.length - 1;
+            updateEditor();
+            saveState();
+        }
+
+        function deleteChapter(i){
+            if(!confirm('Delete this chapter?')) return;
+            state.chapters.splice(i,1);
+            if(state.current >= state.chapters.length) state.current = Math.max(0,state.chapters.length-1);
+            updateEditor();
+            saveState();
+        }
+
+        function saveCurrent(){
+            const idx = state.current;
+            if(state.chapters[idx]){
+                state.chapters[idx].title = chapterTitle.value;
+                state.chapters[idx].content = content.innerHTML;
+            }
+        }
+
+        function updateStats(){
+            const text = (content.textContent || '');
+            const w = wordCount(text);
+            const ch = charCount(text);
+            status.textContent = `Words: ${w} • Characters: ${ch}`;
+            const totalWords = state.chapters.reduce((s,c)=>s+wordCount((c && c.content) ? (new DOMParser().parseFromString(c.content,'text/html').body.textContent || '') : '' ),0) + w - wordCount((state.chapters[state.current] && state.chapters[state.current].content) ? (new DOMParser().parseFromString(state.chapters[state.current].content,'text/html').body.textContent || '') : '' );
+            wordTotal.textContent = totalWords;
+            const pct = Math.min(100, Math.round((totalWords / DEFAULT_TARGET) * 100));
+            progressBar.style.width = pct + '%';
+            const mins = Math.max(1, Math.round(totalWords/200));
+            document.getElementById('readTime').textContent = `${mins} min`;
+            document.getElementById('chapCount').textContent = state.chapters.length;
+        }
+
+        // Simple formatting commands
+        document.querySelectorAll('[data-cmd]').forEach(btn=>{
+            btn.addEventListener('click', ()=> {
+                const cmd = btn.getAttribute('data-cmd');
+                if(cmd === 'h2'){
+                    document.execCommand('formatBlock', false, 'h2');
+                } else if(cmd === 'ul'){
+                    document.execCommand('insertUnorderedList');
+                } else {
+                    document.execCommand(cmd);
+                }
+                content.focus();
+                updateStats();
+            });
+        });
+
+        // Export markdown (very basic conversion)
+        function exportMarkdown(){
+            saveCurrent();
+            let md = `# ${state.projectName}\n\n`;
+            state.chapters.forEach((c, i) => {
+                md += `## ${c.title || 'Untitled'}\n\n`;
+                // crude html->text conversion
+                const txt = (new DOMParser().parseFromString(c.content || '','text/html')).body.textContent || '';
+                md += txt + '\n\n';
+            });
+            const blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (state.projectName || 'project') + '.md';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        // Events
+        newChapterBtn.addEventListener('click', addChapter);
+        exportBtn.addEventListener('click', exportMarkdown);
+        searchChapters.addEventListener('input', () => renderChapters(searchChapters.value));
+        chapterTitle.addEventListener('input', () => { updateStats(); saveStateDebounced(); });
+        content.addEventListener('input', () => { updateStats(); saveStateDebounced(); });
+        content.addEventListener('keyup', updateStats);
+        renameBtn.addEventListener('click', () => {
+            const name = prompt('Project name', state.projectName || 'Untitled');
+            if(name!==null){ state.projectName = name; saveState(); }
+        });
+        clearBtn.addEventListener('click', () => {
+            if(!confirm('Clear all chapters and reset project?')) return;
+            state = { projectName: 'Untitled', chapters: [{title:'Chapter 1',content:''}], current:0 };
+            saveState();
+            updateEditor();
+        });
+
+        // Autosave debounce
+        let saveTimer = null;
+        function saveStateDebounced(){
+            if(saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(()=>{ saveCurrent(); saveState(); }, 700);
+        }
+
+        // Initial load
+        loadState();
+        renderChapters();
+        updateEditor();
+
+        // Periodic autosave (backup)
+        setInterval(()=>{ saveCurrent(); saveState(); }, 30000);
+
+        // keyboard shortcuts
+        document.addEventListener('keydown', (e)=>{
+            if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); saveCurrent(); saveState(); alert('Saved to local storage'); }
+            if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b'){ e.preventDefault(); document.execCommand('bold'); }
+        });
+
+        // --- View routing and simple auth (local demo) ---
+        const navBtns = document.querySelectorAll('.nav .nav-btn');
+        const views = document.querySelectorAll('.view');
+        function showView(name, push=true){
+            views.forEach(v=>{
+                if(v.id === 'view-'+name){ v.classList.add('active'); v.setAttribute('aria-hidden','false'); }
+                else { v.classList.remove('active'); v.setAttribute('aria-hidden','true'); }
+            });
+            navBtns.forEach(b=> b.classList.toggle('active', b.getAttribute('data-view')===name));
+            if(push) location.hash = name;
+            if(name === 'try') updateEditor();
+        }
+
+        navBtns.forEach(b=> b.addEventListener('click', ()=> showView(b.getAttribute('data-view'))));
+
+        // Hash routing
+        function handleHash(){
+            const h = (location.hash || '#try').replace('#','') || 'try';
+            const allowed = ['try','login','register','about'];
+            showView(allowed.includes(h) ? h : 'try', false);
+        }
+        window.addEventListener('hashchange', handleHash);
+        handleHash();
+
+        // Local demo users storage
+        const USERS_KEY = 'bw_demo_users_v1';
+        function getUsers(){ try{ return JSON.parse(localStorage.getItem(USERS_KEY) || '{}') }catch(e){ return {} } }
+        function saveUsers(u){ localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+
+        // Register
+        const registerForm = document.getElementById('registerForm');
+        if(registerForm) registerForm.addEventListener('submit', (ev)=>{
+            ev.preventDefault();
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
+            const pw = document.getElementById('regPassword').value;
+            if(!email || pw.length < 6){ alert('Provide a valid email and password (min 6 chars).'); return; }
+            const users = getUsers();
+            if(users[email]){ alert('An account with this email already exists.'); return; }
+            users[email] = { name, password: pw };
+            saveUsers(users);
+            alert('Account created — you can now log in.');
+            showView('login');
+        });
+
+        // Login
+        const loginForm = document.getElementById('loginForm');
+        if(loginForm) loginForm.addEventListener('submit', (ev)=>{
+            ev.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const pw = document.getElementById('loginPassword').value;
+            const users = getUsers();
+            if(users[email] && users[email].password === pw){
+                alert('Signed in — welcome back ' + (users[email].name || '')); 
+                showView('try');
+            } else { alert('Invalid credentials.'); }
+        });
+
+        // Quick nav between login/register
+        document.getElementById('toRegisterBtn')?.addEventListener('click', ()=> showView('register'));
+        document.getElementById('toLoginBtn')?.addEventListener('click', ()=> showView('login'));
+    </script>
+</body>
+</html>
